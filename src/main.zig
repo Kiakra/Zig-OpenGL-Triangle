@@ -120,7 +120,7 @@ pub fn main() anyerror!void {
 
     c.glfwWindowHint(c.GLFW_CONTEXT_VERSION_MAJOR, 3);
     c.glfwWindowHint(c.GLFW_CONTEXT_VERSION_MINOR, 3);
-    c.glfwWindowHint(c.GLFW_RESIZABLE, 0);
+    c.glfwWindowHint(c.GLFW_RESIZABLE, 1);
 
     var window = c.glfwCreateWindow(WINSIZE[0], WINSIZE[1], WINTITLE, null, null);
 
@@ -147,7 +147,7 @@ pub fn main() anyerror!void {
     c.glEnableVertexAttribArray(0);
     c.glVertexAttribPointer(0, 2, c.GL_FLOAT, c.GL_FALSE, @sizeOf(vertex), null);
     c.glEnableVertexAttribArray(1);
-    c.glVertexAttribPointer(1, 3, c.GL_FLOAT, c.GL_FALSE, @sizeOf(vertex), @ptrCast(*const c_void, &stride));
+    c.glVertexAttribPointer(1, 3, c.GL_FLOAT, c.GL_FALSE, @sizeOf(vertex), @intToPtr(*c_int, @intCast(usize, stride)));
 
     c.glBindVertexArray(0);
     c.glBindBuffer(c.GL_ARRAY_BUFFER, 0);
