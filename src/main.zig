@@ -114,7 +114,7 @@ const fragment_shader_t =
 
 pub fn main() anyerror!void {
     if (c.glfwInit() == 0) {
-        panic("Failed to initialize GLFW!\n", .{});
+        std.debug.panic("Failed to initialize GLFW!\n", .{});
     }
     defer c.glfwTerminate();
 
