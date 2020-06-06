@@ -1,6 +1,4 @@
 const std = @import("std");
-const warn = @import("std").debug.warn;
-const panic = @import("std").debug.panic;
 const c = @import("c.zig");
 
 const WINSIZE = comptime [2]c_int{ 1024, 768 };
