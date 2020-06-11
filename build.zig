@@ -8,6 +8,8 @@ pub fn build(b: *Builder) void {
     exe.setBuildMode(mode);
     exe.addCSourceFile("src/glad/glad.c", &[_][]const u8{"-std=c99"});
 
+    exe.addFrameworkDir("/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.sdk/System/Library/Frameworks/");
+
     exe.addIncludeDir("src/glad");
     exe.linkSystemLibrary("c");
     exe.linkSystemLibrary("glfw");

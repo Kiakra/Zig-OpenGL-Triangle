@@ -142,12 +142,13 @@ pub fn main() anyerror!void {
     c.glBindBuffer(c.GL_ARRAY_BUFFER, vbo);
     c.glBufferData(c.GL_ARRAY_BUFFER, @sizeOf(vertex) * 3, @ptrCast(*const c_void, &vertices), c.GL_STATIC_DRAW);
 
-    var stride: c_int = @sizeOf(f32) * 2;
+    const offset: usize = @sizeOf(f32) * 2;
+    const stride: c_int = @sizeOf(vertex);
 
     c.glEnableVertexAttribArray(0);
-    c.glVertexAttribPointer(0, 2, c.GL_FLOAT, c.GL_FALSE, @sizeOf(vertex), null);
+    c.glVertexAttribPointer(0, 2, c.GL_FLOAT, c.GL_FALSE, stride, null);
     c.glEnableVertexAttribArray(1);
-    c.glVertexAttribPointer(1, 3, c.GL_FLOAT, c.GL_FALSE, @sizeOf(vertex), @intToPtr(*c_int, @intCast(usize, stride)));
+    c.glVertexAttribPointer(1, 3, c.GL_FLOAT, c.GL_FALSE, stride, @intToPtr(*c_int, offset));
 
     c.glBindVertexArray(0);
     c.glBindBuffer(c.GL_ARRAY_BUFFER, 0);
