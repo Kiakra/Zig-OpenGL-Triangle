@@ -6,9 +6,9 @@ const WINTITLE = comptime "OpenGL Triangle Example!";
 
 /// Shader struct
 pub const Shader = struct {
-    id: c_uint = 0,
+    id: u32 = 0,
 
-    fn compile(source: [*]const u8, shaderType: c_uint, alloc: *std.mem.Allocator) !c_uint {
+    fn compile(source: [*]const u8, shaderType: c_uint, alloc: *std.mem.Allocator) !u32 {
         var result = c.glCreateShader(shaderType);
         c.glShaderSource(result, 1, &source, null);
         c.glCompileShader(result);
