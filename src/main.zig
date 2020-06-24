@@ -8,18 +8,22 @@ const WINTITLE = comptime "OpenGL Triangle Example!";
 pub const Shader = struct {
     id: c_uint = 0,
 
-    fn compile(source: [*c]const u8, shaderType: c_uint, alloc: *std.mem.Allocator) !c_uint {
+    fn compile(source: [*]const u8, shaderType: c_uint, alloc: *std.mem.Allocator) !c_uint {
         var result = c.glCreateShader(shaderType);
         c.glShaderSource(result, 1, &source, null);
         c.glCompileShader(result);
 
-        var whu: c_int = undefined;
+        var whu: i32 = undefined;
         c.glGetShaderiv(result, c.GL_COMPILE_STATUS, &whu);
         if (whu == c.GL_FALSE) {
-            var length: c_int = undefined;
+            defer c.glDeleteShader(result);
+
+            var length: i32 = undefined;
             c.glGetShaderiv(result, c.GL_INFO_LOG_LENGTH, &length);
+
             var message = try alloc.alloc(u8, @intCast(usize, length));
             defer alloc.free(message);
+
             c.glGetShaderInfoLog(result, length, &length, @ptrCast([*c]u8, message));
 
             const mtype: *const [4:0]u8 = if (shaderType == c.GL_VERTEX_SHADER) "VERT" else "FRAG";
@@ -28,17 +32,17 @@ pub const Shader = struct {
                 mtype,
                 message,
             });
-
-            c.glDeleteShader(result);
         }
 
         return result;
     }
 
     /// Creates a shader from vertex and fragment source
-    pub fn create(vertexShader: [*c]const u8, fragShader: [*c]const u8, alloc: *std.mem.Allocator) !Shader {
+    pub fn create(vertexShader: [*]const u8, fragShader: [*]const u8, alloc: *std.mem.Allocator) !Shader {
         const vx = try Shader.compile(vertexShader, c.GL_VERTEX_SHADER, alloc);
         const fg = try Shader.compile(fragShader, c.GL_FRAGMENT_SHADER, alloc);
+        defer c.glDeleteShader(vx);
+        defer c.glDeleteShader(fg);
 
         var result = Shader{};
         result.id = c.glCreateProgram();
@@ -46,10 +50,12 @@ pub const Shader = struct {
         c.glAttachShader(result.id, fg);
         c.glLinkProgram(result.id);
 
-        var ok: c_int = 0;
+        var ok: i32 = 0;
         c.glGetProgramiv(result.id, c.GL_LINK_STATUS, &ok);
         if (ok == c.GL_FALSE) {
-            var error_size: c_int = undefined;
+            defer c.glDeleteProgram(result.id);
+
+            var error_size: i32 = undefined;
             c.glGetProgramiv(result.id, c.GL_INFO_LOG_LENGTH, &error_size);
 
             var message = try alloc.alloc(u8, @intCast(usize, error_size));
@@ -57,13 +63,8 @@ pub const Shader = struct {
 
             c.glGetProgramInfoLog(result.id, error_size, &error_size, @ptrCast([*c]u8, message));
             std.debug.warn("Error occured while linking shader program:\n\t{}\n", .{message});
-
-            c.glDeleteProgram(result.id);
         }
         c.glValidateProgram(result.id);
-
-        c.glDeleteShader(vx);
-        c.glDeleteShader(fg);
 
         return result;
     }
@@ -123,6 +124,7 @@ pub fn main() anyerror!void {
     c.glfwWindowHint(c.GLFW_RESIZABLE, 1);
 
     var window = c.glfwCreateWindow(WINSIZE[0], WINSIZE[1], WINTITLE, null, null);
+    defer c.glfwDestroyWindow(window);
 
     c.glfwMakeContextCurrent(window);
     if (c.gladLoadGLLoader(@ptrCast(fn ([*c]const u8) callconv(.C) ?*c_void, c.glfwGetProcAddress)) == 0) {
@@ -130,30 +132,37 @@ pub fn main() anyerror!void {
     }
     c.glfwSwapInterval(1);
 
-    var vbo: c_uint = undefined;
-    var vao: c_uint = undefined;
+    var vbo: u32 = undefined;
+    var vao: u32 = undefined;
 
     var program = try Shader.create(vertex_shader_t, fragment_shader_t, std.heap.page_allocator);
+    defer program = program.destroy();
 
     c.glGenVertexArrays(1, &vao);
     c.glGenBuffers(1, &vbo);
+    defer c.glDeleteVertexArrays(1, &vao);
+    defer c.glDeleteBuffers(1, &vbo);
+
     c.glBindVertexArray(vao);
 
     c.glBindBuffer(c.GL_ARRAY_BUFFER, vbo);
     c.glBufferData(c.GL_ARRAY_BUFFER, @sizeOf(vertex) * 3, @ptrCast(*const c_void, &vertices), c.GL_STATIC_DRAW);
 
     const offset: usize = @sizeOf(f32) * 2;
-    const stride: c_int = @sizeOf(vertex);
+    const stride: i32 = @sizeOf(vertex);
 
     c.glEnableVertexAttribArray(0);
     c.glVertexAttribPointer(0, 2, c.GL_FLOAT, c.GL_FALSE, stride, null);
     c.glEnableVertexAttribArray(1);
-    c.glVertexAttribPointer(1, 3, c.GL_FLOAT, c.GL_FALSE, stride, @intToPtr(*c_int, offset));
+    c.glVertexAttribPointer(1, 3, c.GL_FLOAT, c.GL_FALSE, stride, @intToPtr(*i32, offset));
 
     c.glBindVertexArray(0);
     c.glBindBuffer(c.GL_ARRAY_BUFFER, 0);
 
     while (c.glfwWindowShouldClose(window) == 0) {
+        defer c.glfwSwapBuffers(window);
+        defer c.glfwPollEvents();
+
         var w: c_int = 0;
         var h: c_int = 0;
         c.glfwGetFramebufferSize(window, &w, &h);
@@ -164,13 +173,5 @@ pub fn main() anyerror!void {
         program.attach();
         c.glBindVertexArray(vao);
         c.glDrawArrays(c.GL_TRIANGLES, 0, 3);
-
-        c.glfwSwapBuffers(window);
-        c.glfwPollEvents();
     }
-
-    program = program.destroy();
-    c.glDeleteVertexArrays(1, &vao);
-    c.glDeleteBuffers(1, &vbo);
-    c.glfwDestroyWindow(window);
 }
